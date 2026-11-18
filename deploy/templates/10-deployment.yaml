@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aigw-budget-admin
+  namespace: ${NAMESPACE}
+  labels: {app: aigw-budget-admin}
+spec:
+  replicas: 1                                   # audit log and cache are in memory: keep one replica
+  selector:
+    matchLabels: {app: aigw-budget-admin}
+  template:
+    metadata:
+      labels: {app: aigw-budget-admin}
+      annotations:
+        aigw-budget-admin/config-hash: "${CONFIG_HASH}"   # restarts the pod when app files or settings change
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        # Backend + UI: listens on localhost only, reachable solely through oauth2-proxy
+        - name: app
+          image: ${APP_IMAGE}
+          command: ["python3", "/app/server.py"]
+          env:
+            - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+            - {name: PYTHONUNBUFFERED, value: "1"}
+            - {name: LISTEN, value: "127.0.0.1:8080"}
+          envFrom:
+            - configMapRef: {name: aigw-budget-admin-settings}
+            - secretRef: {name: aigw-budget-admin-scm}
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 384Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: app, mountPath: /app, readOnly: true}
+          readinessProbe:
+            exec: {command: ["python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8080/healthz',timeout=3)"]}
+            periodSeconds: 20
+        # OIDC sign-in in front of the app; only the listed admin emails get in
+        - name: oauth2-proxy
+          image: ${PROXY_IMAGE}
+          args:
+            - --http-address=0.0.0.0:4180
+            - --upstream=http://127.0.0.1:8080/
+            - --provider=${OIDC_PROVIDER}
+            - --oidc-issuer-url=${OIDC_ISSUER_URL}
+            - --client-id=${OIDC_CLIENT_ID}
+            - --redirect-url=${PUBLIC_URL}/oauth2/callback
+            - --scope=${OIDC_SCOPE}
+            - --oidc-email-claim=${OIDC_EMAIL_CLAIM}
+            - --insecure-oidc-allow-unverified-email=${OIDC_ALLOW_UNVERIFIED_EMAIL}
+            - --authenticated-emails-file=/etc/oauth2-proxy/admins.txt
+            - --cookie-secure=${COOKIE_SECURE}
+            - --cookie-samesite=lax
+            - --cookie-name=_aigw_budget_admin
+            - --cookie-expire=8h
+            - --pass-user-headers=true
+            - --skip-provider-button=true
+            - --code-challenge-method=S256
+            - --custom-templates-dir=/templates
+            - --upstream-timeout=120s
+            - --reverse-proxy=${REVERSE_PROXY}
+            - --whitelist-domain=${LOGOUT_DOMAIN}
+          env:
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom: {secretKeyRef: {name: aigw-budget-admin-oidc, key: OIDC_CLIENT_SECRET}}
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom: {secretKeyRef: {name: aigw-budget-admin-oidc, key: COOKIE_SECRET}}
+          ports: [{containerPort: 4180, name: http}]
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: admins, mountPath: /etc/oauth2-proxy, readOnly: true}
+            - {name: templates, mountPath: /templates, readOnly: true}
+          readinessProbe:
+            httpGet: {path: /ping, port: 4180}
+            periodSeconds: 20
+      volumes:
+        - name: app
+          configMap:
+            name: aigw-budget-admin-app
+            items:
+              - {key: server.py, path: server.py}
+              - {key: demo.py, path: demo.py}
+              - {key: index.html, path: static/index.html}
+        - name: admins
+          configMap: {name: aigw-budget-admin-admins}
+        - name: templates
+          configMap: {name: aigw-budget-admin-templates}

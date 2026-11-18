@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aigw-budget-admin
+  namespace: ${NAMESPACE}
+  labels: {app: aigw-budget-admin}
+${SERVICE_ANNOTATIONS}spec:
+  type: ${SERVICE_TYPE}
+  selector: {app: aigw-budget-admin}
+  ports:
+    - {name: http, port: 80, targetPort: 4180}

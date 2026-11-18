@@ -1,0 +1,7 @@
+# deployment settings contain secrets
+deploy/config.env
+*.env
+!deploy/config.env.example
+__pycache__/
+*.pyc
+.DS_Store

@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Gateway Budget Admin__TITLE_SUFFIX__</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f5f5f3; --surface-1: #fcfcfb; --surface-2: #ffffff; --border: #e3e2de; --grid: #ecebe7;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7a7974;
+    --accent: #2a78d6; --accent-ink: #ffffff;
+    --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-other: #a3a29c;
+    --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+    --track: #ecebe7; --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --bg: #121211; --surface-1: #1a1a19; --surface-2: #20201f; --border: #2e2e2c; --grid: #2a2a28;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8e8d86;
+      --accent: #3987e5; --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-other: #6b6a65;
+      --track: #2a2a28; --shadow: 0 1px 2px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #121211; --surface-1: #1a1a19; --surface-2: #20201f; --border: #2e2e2c; --grid: #2a2a28;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8e8d86;
+    --accent: #3987e5; --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-other: #6b6a65;
+    --track: #2a2a28; --shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text-primary);
+         font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif; }
+  .num { font-variant-numeric: tabular-nums; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--surface-1); border-bottom: 1px solid var(--border); }
+  .bar { max-width: 1280px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+  .logo { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; }
+  .logo svg { width: 18px; height: 18px; }
+  .title { font-weight: 650; font-size: 15px; }
+  .subtitle { color: var(--text-muted); font-size: 12px; }
+  .spacer { flex: 1; }
+  .meta { color: var(--text-muted); font-size: 12px; text-align: right; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2);
+           color: var(--text-primary); padding: 6px 12px; }
+  button:hover { border-color: var(--text-muted); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.danger { color: var(--critical); }
+  button.danger:hover { border-color: var(--critical); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  a.signout { text-decoration: none; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; background: var(--surface-2); }
+  a.signout:hover { color: var(--text-primary); border-color: var(--text-muted); }
+  button:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  main { max-width: 1280px; margin: 0 auto; padding: 20px; display: grid; gap: 20px; }
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+  .kpi { padding: 14px 16px; }
+  .kpi .label { color: var(--text-secondary); font-size: 12px; }
+  .kpi .value { font-size: 26px; font-weight: 650; margin-top: 2px; }
+  .kpi .hint { color: var(--text-muted); font-size: 12px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary); margin: 0 0 10px; font-weight: 600; }
+  .depts { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .dept { padding: 16px; display: grid; gap: 12px; cursor: pointer; border: 1px solid var(--border); }
+  .dept[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .dept .head { display: flex; align-items: baseline; gap: 8px; }
+  .dept .name { font-weight: 650; font-size: 15px; text-transform: capitalize; }
+  .dept .slug { color: var(--text-muted); font-size: 12px; }
+  .dept .spend { margin-left: auto; font-weight: 650; }
+  .meter { display: grid; gap: 4px; }
+  .meter .row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); }
+  .track { height: 8px; background: var(--track); border-radius: 4px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 4px; }
+  .status { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+  .status svg { width: 12px; height: 12px; }
+  .stack { display: flex; height: 10px; border-radius: 4px; overflow: hidden; gap: 2px; background: transparent; }
+  .stack span { display: block; height: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--text-secondary); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .muted { color: var(--text-muted); }
+  .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chip { border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 4px 12px; font-size: 13px; text-transform: capitalize; }
+  .chip[aria-pressed="true"] { background: var(--text-primary); color: var(--surface-1); border-color: var(--text-primary); }
+  input[type=search] { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); min-width: 220px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+  th { font-size: 12px; color: var(--text-secondary); font-weight: 600; background: var(--surface-1); position: sticky; top: 0; }
+  tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+  .user strong { display: block; }
+  .user span { color: var(--text-muted); font-size: 12px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-secondary); text-transform: capitalize; }
+  .w-meter { min-width: 200px; }
+  .w-models { min-width: 180px; }
+  .split { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; }
+  .panel { padding: 16px; }
+  .models-chart .mrow { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; margin-bottom: 10px; font-size: 13px; }
+  .models-chart .mrow .track { grid-column: 1 / -1; height: 10px; }
+  .audit li { list-style: none; padding: 8px 0; border-bottom: 1px solid var(--grid); font-size: 12px; color: var(--text-secondary); }
+  .audit ul { margin: 0; padding: 0; max-height: 280px; overflow: auto; }
+  .tip { position: fixed; z-index: 20; pointer-events: none; background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border);
+         border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: var(--shadow); display: none; max-width: 280px; }
+  dialog { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); color: var(--text-primary); padding: 20px; width: min(440px, 92vw); }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  dialog h3 { margin: 0 0 8px; font-size: 16px; }
+  dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--text-primary); color: var(--surface-1); padding: 10px 14px; border-radius: 8px; font-size: 13px; display: none; z-index: 30; }
+  .error { padding: 12px 16px; border-left: 3px solid var(--critical); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  @media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); } .split { grid-template-columns: 1fr; } .meta { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+    <div><div class="title">AI Gateway Budget Admin</div><div class="subtitle">__APP_SUBTITLE__</div></div>
+    <div class="spacer"></div>
+    <div class="meta"><div id="actor">—</div><div id="updated">Loading…</div></div>
+    <button id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    <button id="refreshBtn" class="primary">Refresh</button>
+    <a id="signOut" href="__SIGNOUT_URL__" class="signout" title="Sign out (also ends the Keycloak session)">Sign out</a>
+  </div>
+</header>
+
+<main>
+  <div id="error" class="card error" style="display:none"></div>
+
+  <section class="kpis" aria-label="Summary">
+    <div class="card kpi"><div class="label">Total spend</div><div class="value num" id="kSpend">—</div><div class="hint" id="kSpendHint">actual LLM spend</div></div>
+    <div class="card kpi"><div class="label">Departments</div><div class="value num" id="kDepts">—</div><div class="hint">AI Gateway workspaces</div></div>
+    <div class="card kpi"><div class="label">Users</div><div class="value num" id="kUsers">—</div><div class="hint" id="kUsersHint">from the identity provider</div></div>
+    <div class="card kpi"><div class="label">Users over budget</div><div class="value num" id="kExhausted">—</div><div class="hint">blocked until reset</div></div>
+  </section>
+
+  <section>
+    <h2>Departments</h2>
+    <div class="depts" id="depts"></div>
+  </section>
+
+  <section class="split">
+    <div class="card panel">
+      <div class="toolbar">
+        <h2 style="margin:0 8px 0 0">Users</h2>
+        <div id="chips" role="group" aria-label="Filter by department"></div>
+        <div class="spacer"></div>
+        <label class="sr-only" for="q">Search users</label>
+        <input type="search" id="q" placeholder="Search name, email, tier…">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>User</th><th>Department</th><th>Tier</th><th class="w-meter">Budget</th><th class="w-models">Spend by model</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="legend" id="modelLegend" style="margin-top:12px"></div>
+    </div>
+
+    <div style="display:grid; gap:20px">
+      <div class="card panel">
+        <h2 id="modelsTitle">Spend by model</h2>
+        <div class="models-chart" id="modelsChart"></div>
+      </div>
+      <div class="card panel audit">
+        <h2>Recent resets</h2>
+        <ul id="audit"><li class="muted">No resets yet.</li></ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="tip" id="tip" role="tooltip"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="confirm">
+  <h3>Reset budget?</h3>
+  <p id="confirmText" style="margin:0;color:var(--text-secondary)"></p>
+  <div class="actions"><button id="cancelBtn">Cancel</button><button id="okBtn" class="primary">Reset budget</button></div>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const fmt = v => '$' + (Number(v) || 0).toFixed(2);
+const fmt4 = v => { const n = Number(v) || 0; return '$' + n.toFixed(Math.abs(n) >= 1 || n === 0 ? 2 : 4); };
+const winLabel = w => w >= 48 && w % 24 === 0 ? (w / 24) + ' days' : w + 'h';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let data = null, filter = 'all', pending = null, retryTimer = null;
+
+// Model -> categorical slot, assigned in fixed order by first appearance across the whole dataset (never by rank),
+// so a model keeps its color when filters change. Slots 1-3 validated; anything past three folds into "Other".
+const SLOTS = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)'];
+let modelColor = {};
+function assignModelColors() {
+  modelColor = {};
+  const order = [];
+  data.departments.forEach(d => Object.keys(d.models || {}).sort().forEach(m => { if (!order.includes(m)) order.push(m); }));
+  order.forEach((m, i) => modelColor[m] = i < SLOTS.length ? SLOTS[i] : 'var(--series-other)');
+}
+const shortModel = m => (m || 'unknown').replace(/^@[^/]+\//, '').replace(/^anthropic\./, '').replace(/^us\.anthropic\./, '');
+
+const ICONS = {
+  good: '<svg viewBox="0 0 16 16" fill="var(--good)"><circle cx="8" cy="8" r="7"/><path d="M5 8.5l2 2 4-4.5" stroke="#fff" stroke-width="1.6" fill="none"/></svg>',
+  warning: '<svg viewBox="0 0 16 16"><path d="M8 1.5l7 13H1z" fill="var(--warning)"/><path d="M8 6v4M8 12v.5" stroke="#000" stroke-width="1.5"/></svg>',
+  critical: '<svg viewBox="0 0 16 16" fill="var(--critical)"><circle cx="8" cy="8" r="7"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#fff" stroke-width="1.6"/></svg>',
+  none: '<svg viewBox="0 0 16 16" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/></svg>'
+};
+function state(used, limit) {
+  if (!limit) return {key: 'none', label: 'No budget', color: 'var(--text-muted)'};
+  const p = used / limit;
+  if (p >= 1) return {key: 'critical', label: 'Exhausted', color: 'var(--critical)'};
+  if (p >= 0.75) return {key: 'warning', label: 'Near limit', color: 'var(--warning)'};
+  return {key: 'good', label: 'Within budget', color: 'var(--good)'};
+}
+function meter(used, limit, label) {
+  const s = state(used, limit), pct = limit ? Math.min(100, used / limit * 100) : 0;
+  return `<div class="meter">
+    <div class="row"><span class="num">${fmt(used)} <span class="muted">of ${limit ? fmt(limit) : '—'}</span></span>
+      <span class="status">${ICONS[s.key]}${s.label}</span></div>
+    <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct.toFixed(0)}" aria-label="${esc(label)}">
+      <div class="fill" style="width:${pct}%;background:${s.color}"></div></div></div>`;
+}
+function wsBudget(d) {
+  const w = d.workspace_budget;
+  if (!w) return '';
+  if (!w.limit) return `<div class="meter"><div class="row"><span class="num">${fmt(d.spend)} <span class="muted">spent · no workspace cap</span></span>
+      <span class="status">${ICONS.none}No cap</span></div><div class="track"></div></div>
+    <div class="muted" style="font-size:11px">Workspace budget · limited by per-user budgets only</div>`;
+  const pct = Math.min(100, w.used / w.limit * 100);
+  return meter(w.used, w.limit, d.name + ' workspace budget') +
+    `<div class="muted" style="font-size:11px">Workspace budget · ${pct.toFixed(0)}% used · resets ${esc(w.period)}</div>`;
+}
+function stack(models, providers) {
+  const entries = Object.entries(models || {}).filter(([, v]) => v > 0);
+  const total = entries.reduce((a, [, v]) => a + v, 0);
+  if (!total) return '<span class="muted">No spend in window</span>';
+  const prov = m => providers && providers[m] ? ' (' + Object.keys(providers[m]).filter(Boolean).join(', ') + ')' : '';
+  return `<div class="stack" data-tip="${esc(entries.map(([m, v]) => `${shortModel(m)}${prov(m)}: ${fmt4(v)}`).join('<br>'))}">` +
+    entries.map(([m, v]) => `<span style="width:${v / total * 100}%;background:${modelColor[m] || 'var(--series-other)'}"></span>`).join('') + `</div>
+    <div class="muted num" style="font-size:12px;margin-top:3px">${fmt4(total)} total</div>`;
+}
+
+function render() {
+  const t = data.totals;
+  $('#kSpend').textContent = fmt(t.spend); $('#kDepts').textContent = t.departments;
+  const win = (data.departments.find(d => d.trace_window_hours) || {}).trace_window_hours;
+  $('#kSpendHint').textContent = win ? `last ${winLabel(win)} · from ${(data.departments.find(d => d.spend_source) || {}).spend_source || 'gateway traces'}` : 'from budget counters';
+  $('#kUsersHint').textContent = data.user_source === 'idp' ? 'from the identity provider' : 'seen in gateway logs';
+  $('#kUsers').textContent = t.users; $('#kExhausted').textContent = t.exhausted;
+  if (data.read_only) $('#audit').innerHTML = '<li class="muted">Read-only deployment: budget resets are disabled (customer tenant).</li>';
+  $('#actor').textContent = data.actor && data.actor !== 'unknown' ? 'Signed in as ' + data.actor : '';
+  $('#updated').textContent = (data.demo ? 'Demo data · ' : '') + 'Updated ' + new Date(data.generated_at).toLocaleTimeString();
+  assignModelColors();
+
+  // Department cards
+  $('#depts').innerHTML = data.departments.map(d => {
+    const over = d.users.filter(u => u.budgets.some(x => x.exhausted)).length;
+    const models = Object.entries(d.models || {});
+    return `<div class="card dept" role="button" tabindex="0" aria-pressed="${filter === d.name}" data-dept="${esc(d.name)}">
+      <div class="head"><span class="name">${esc(d.name)}</span><span class="slug">${esc(d.slug)}</span><span class="spend num">${fmt(d.spend)}</span></div>
+      ${wsBudget(d)}
+      <div class="row" style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary)">
+        <span>${d.users.length} users · ${d.budget_policies.length} budget policies</span>
+        <span class="status">${over ? ICONS.critical + over + ' over budget' : ICONS.good + 'none over budget'}</span></div>
+      ${models.length ? stack(d.models, d.providers) : '<span class="muted" style="font-size:12px">No spend in window</span>'}
+      ${d.error ? `<div class="status">${ICONS.critical}API error ${esc(d.error)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Filter chips
+  $('#chips').innerHTML = ['all', ...data.departments.map(d => d.name)].map(n =>
+    `<button class="chip" aria-pressed="${filter === n}" data-chip="${esc(n)}">${esc(n)}</button>`).join(' ');
+
+  // Users table
+  const q = $('#q').value.trim().toLowerCase();
+  const rows = [];
+  data.departments.filter(d => filter === 'all' || d.name === filter).forEach(d => d.users.forEach(u => {
+    const hay = `${u.user} ${u.name} ${u.email} ${u.tier} ${d.name}`.toLowerCase();
+    if (q && !hay.includes(q)) return;
+    const b = u.budgets[0];
+    const resettable = data.read_only ? [] : u.budgets.filter(x => x.entity_id && x.used > 0);
+    rows.push(`<tr>
+      <td class="user"><strong>${esc(u.name)}</strong><span>${esc(u.email || u.user)}${u.enabled === false ? ' · disabled' : ''}</span></td>
+      <td>${esc(d.name)}</td>
+      <td>${u.tier ? `<span class="badge">${esc(u.tier)}</span>` : '<span class="muted">—</span>'}</td>
+      <td class="w-meter">${b ? meter(b.used, b.limit, u.user + ' budget') + `<div class="muted" style="font-size:11px;margin-top:2px">${esc(b.policy)}</div>` : '<span class="status">' + ICONS.none + 'No per-user budget</span>'}</td>
+      <td class="w-models">${stack(u.models, d.providers)}</td>
+      <td style="text-align:right">${resettable.map(x => `<button class="danger" data-reset='${esc(JSON.stringify({workspace_id: d.workspace_id, policy_id: x.policy_id, entity_id: x.entity_id, value_key: x.value_key, label: u.name + ' — ' + x.policy}))}'>Reset</button>`).join(' ') || ''}</td>
+    </tr>`);
+  }));
+  $('#rows').innerHTML = rows.join('') || '<tr><td colspan="6" class="muted">No users match.</td></tr>';
+
+  // Model legend + model chart (horizontal bars, one hue per model, values in text tokens)
+  const totals = {};
+  data.departments.filter(d => filter === 'all' || d.name === filter).forEach(d => Object.entries(d.models || {}).forEach(([m, v]) => totals[m] = (totals[m] || 0) + v));
+  const list = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  const max = Math.max(...list.map(([, v]) => v), 0);
+  $('#modelsTitle').textContent = 'Spend by model' + (filter === 'all' ? '' : ' · ' + filter) + (win ? ` · last ${winLabel(win)}` : '');
+  const provAll = {};
+  data.departments.filter(d => filter === 'all' || d.name === filter).forEach(d => Object.entries(d.providers || {}).forEach(([m, pv]) => Object.keys(pv).forEach(p => (provAll[m] = provAll[m] || new Set()).add(p))));
+  $('#modelsChart').innerHTML = list.length ? list.map(([m, v]) => `<div class="mrow" data-tip="${esc(shortModel(m) + (provAll[m] ? ' (' + [...provAll[m]].filter(Boolean).join(', ') + ')' : '') + ': ' + fmt4(v))}">
+      <span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;background:${modelColor[m]}"></i>${esc(shortModel(m))}</span>
+      <span class="num">${fmt4(v)}</span>
+      <div class="track"><div class="fill" style="width:${max ? v / max * 100 : 0}%;background:${modelColor[m]}"></div></div></div>`).join('')
+    : '<p class="muted" style="margin:0">No LLM spend in this window.</p>';
+  $('#modelLegend').innerHTML = Object.keys(modelColor).map(m => `<span><i style="background:${modelColor[m]}"></i>${esc(shortModel(m))}</span>`).join('');
+}
+
+async function load(force) {
+  $('#refreshBtn').disabled = true;
+  try {
+    const r = await fetch('/api/overview' + (force ? '?refresh=1' : ''), {credentials: 'same-origin'});
+    if (r.redirected || (r.headers.get('content-type') || '').includes('text/html') && r.url.includes('/oauth2/')) { location.reload(); return; }  // session expired
+    const text = await r.text();
+    let body;
+    try { body = JSON.parse(text); } catch (_) {
+      throw new Error(r.status >= 500 ? 'the server is busy (HTTP ' + r.status + '). Retrying shortly…' : 'unexpected response (HTTP ' + r.status + ')');
+    }
+    if (!r.ok) throw new Error(body.error || r.status);
+    data = body; $('#error').style.display = 'none'; render(); loadAudit();
+  } catch (e) {
+    $('#error').style.display = 'block'; $('#error').textContent = 'Could not load budgets: ' + e.message;
+    if (!retryTimer) retryTimer = setTimeout(() => { retryTimer = null; load(false); }, 10000);
+  } finally { $('#refreshBtn').disabled = false; }
+}
+async function loadAudit() {
+  try {
+    const r = await fetch('/api/audit'); const {items} = await r.json();
+    $('#audit').innerHTML = items.length ? items.map(a => `<li><strong style="color:var(--text-primary)">${esc(a.value_key || a.policy_id)}</strong>
+      <br>${esc(a.department)} · by ${esc(a.actor)} · ${new Date(a.at).toLocaleString()} · ${a.result === 200 ? 'ok' : 'failed (' + a.result + ')'}</li>`).join('')
+      : (typeof data !== 'undefined' && data && data.read_only ? '<li class="muted">Read-only deployment: budget resets are disabled (customer tenant).</li>' : '<li class="muted">No resets yet.</li>');
+  } catch (e) { /* audit is best effort */ }
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 3500); }
+
+document.addEventListener('click', e => {
+  const chip = e.target.closest('[data-chip]'); if (chip) { filter = chip.dataset.chip; render(); return; }
+  const rb = e.target.closest('[data-reset]');
+  if (rb) { e.stopPropagation(); pending = JSON.parse(rb.dataset.reset); $('#confirmText').textContent = `This sets the usage counter for "${pending.label}" back to $0. Requests that were blocked by this budget will be allowed again.`; $('#confirm').showModal(); return; }
+  const dept = e.target.closest('[data-dept]'); if (dept) { filter = filter === dept.dataset.dept ? 'all' : dept.dataset.dept; render(); }
+});
+document.addEventListener('keydown', e => { const d = e.target.closest && e.target.closest('[data-dept]'); if (d && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); d.click(); } });
+$('#cancelBtn').onclick = () => $('#confirm').close();
+$('#okBtn').onclick = async () => {
+  $('#okBtn').disabled = true;
+  try {
+    const r = await fetch('/api/reset', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(pending)});
+    let body = {}; try { body = JSON.parse(await r.text()); } catch (_) { body = {error: 'HTTP ' + r.status}; }
+    if (!r.ok) throw new Error(body.error || r.status);
+    toast('Budget reset: ' + pending.label); $('#confirm').close(); await load(true);
+  } catch (err) { toast('Reset failed: ' + err.message); }
+  finally { $('#okBtn').disabled = false; }
+};
+$('#refreshBtn').onclick = () => load(true);
+$('#q').oninput = () => data && render();
+$('#themeBtn').onclick = () => {
+  const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.dataset.theme = cur === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem('theme', document.documentElement.dataset.theme); } catch (e) {}
+};
+try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+
+// Tooltips for model stacks and bars
+const tip = $('#tip');
+document.addEventListener('mousemove', e => {
+  const el = e.target.closest('[data-tip]');
+  if (!el) { tip.style.display = 'none'; return; }
+  tip.innerHTML = el.dataset.tip; tip.style.display = 'block';
+  tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+});
+load(false);
+setInterval(() => load(false), 60000);
+</script>
+</body>
+</html>
