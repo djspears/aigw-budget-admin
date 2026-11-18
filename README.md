@@ -24,7 +24,13 @@ After resetting an exhausted user (counter back to $0, entry under *Recent reset
 
 </details>
 
-*Screenshots use the built-in demo data (`DEMO=true`); names and numbers are synthetic.*
+*The screenshots above use the built-in demo data (`DEMO=true`); names and numbers are synthetic.*
+
+**Running against a real tenant** (lab deployment with four workspaces, filtered to one department; this lab used
+the optional Keycloak roster for users and Jaeger traces for spend, so the KPI hints read "from the identity provider"
+and "from gateway traces"; with the default logs source they read "seen in gateway logs" and "from gateway logs"):
+
+![Live lab deployment](docs/images/dashboard-live-lab.png)
 
 ## Features
 | | |
